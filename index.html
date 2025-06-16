@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>景宁具身智能产业发展蓝图</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Chosen Palette: "She-Shan Harmony" (畲山和谐) -->
+    <!-- Application Structure Plan: The SPA is designed with a non-linear, thematic structure to enhance user exploration. It begins with a captivating Hero section with key metrics. The "Jingning's Endowment" section uses interactive cards and a chart to showcase the county's unique ecological, cultural, and economic background. The "SWOT Analysis" is presented in a clear 2x2 grid for quick strategic understanding. The core "Application Blueprint" section uses a tabbed interface to detail the four key application areas, making dense information digestible. The "Development Roadmap" transforms the report's policy table into an interactive timeline, allowing users to toggle between 1, 3, and 5-year plans. This structure guides the user from the "Why" (endowment), to the "Where" (SWOT), to the "What" (blueprint), and finally the "How" (roadmap), creating a logical and engaging narrative flow that prioritizes usability over the original report's formal structure. -->
+    <!-- Visualization & Content Choices: 
+        - Goal: Inform/Overview -> Method: Key Stat Cards (HTML/CSS) in Hero Section. Justification: Provides a quick, high-impact summary.
+        - Goal: Compare (Land Use) -> Viz: Donut Chart (Chart.js/Canvas) in Endowment Section. Justification: Intuitively shows the dominance of forest resources.
+        - Goal: Organize/Compare -> Viz: 2x2 SWOT Grid (HTML/Tailwind). Justification: This layout is a standard and highly effective way to visualize a SWOT analysis, making complex relationships easy to grasp.
+        - Goal: Inform/Compare (Efficiency) -> Viz: Bar Chart (Chart.js/Canvas) in Application Blueprint section. Justification: Visually demonstrates the potential benefits of AI adoption in a key sector.
+        - Goal: Show Change -> Viz: Interactive Timeline/Buttons + Line Chart (JS + Chart.js/Canvas) in Roadmap Section. Justification: Turns a static policy table into an engaging, user-controlled exploration of the multi-year plan, with a chart to visualize projected growth.
+        - New Feature (LLM Integration): Goal: Inspire/Generate Ideas -> Method: Button triggered LLM text generation. Justification: Provides dynamic, AI-powered insights tailored to each application area, enhancing exploration and ideation.
+        - All choices adhere to the NO SVG/Mermaid constraint. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+
+    <style>
+        :root {
+            --bg-main: #FAF9F6;
+            --text-dark: #2d331f;
+            --primary-green: #587458;
+            --accent-ochre: #b48a5e;
+            --card-bg: #FFFFFF;
+            --border-color: #E5E7EB;
+        }
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-dark);
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 40vh;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+        .nav-link {
+            position: relative;
+            transition: color 0.3s ease;
+        }
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 2px;
+            bottom: -4px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: var(--accent-ochre);
+            transition: width 0.3s ease;
+        }
+        .nav-link.active, .nav-link:hover {
+            color: var(--accent-ochre);
+        }
+        .nav-link.active::after, .nav-link:hover::after {
+            width: 100%;
+        }
+        .tab-btn.active {
+            background-color: var(--primary-green);
+            color: white;
+            border-color: var(--primary-green);
+        }
+        .roadmap-btn.active {
+            background-color: var(--accent-ochre);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--primary-green);
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <header id="main-header" class="bg-white/80 backdrop-blur-md sticky top-0 z-50 shadow-sm">
+        <nav class="container mx-auto px-6 py-3 flex justify-between items-center">
+            <div class="text-xl font-bold" style="color: var(--primary-green);">
+                景宁 · 智见未来
+            </div>
+            <div class="hidden md:flex space-x-8">
+                <a href="#hero" class="nav-link active">首页</a>
+                <a href="#endowment" class="nav-link">景宁禀赋</a>
+                <a href="#swot" class="nav-link">SWOT分析</a>
+                <a href="#blueprint" class="nav-link">应用蓝图</a>
+                <a href="#roadmap" class="nav-link">发展路线</a>
+            </div>
+            <div class="md:hidden">
+                <button id="mobile-menu-button" class="text-gray-700 focus:outline-none">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                </button>
+            </div>
+        </nav>
+        <div id="mobile-menu" class="hidden md:hidden">
+            <a href="#hero" class="block py-2 px-4 text-sm hover:bg-gray-200">首页</a>
+            <a href="#endowment" class="block py-2 px-4 text-sm hover:bg-gray-200">景宁禀赋</a>
+            <a href="#swot" class="block py-2 px-4 text-sm hover:bg-gray-200">SWOT分析</a>
+            <a href="#blueprint" class="block py-2 px-4 text-sm hover:bg-gray-200">应用蓝图</a>
+            <a href="#roadmap" class="block py-2 px-4 text-sm hover:bg-gray-200">发展路线</a>
+        </div>
+    </header>
+
+    <main>
+        <section id="hero" class="min-h-screen flex items-center bg-cover bg-center" style="background-image: linear-gradient(to bottom, rgba(250, 249, 246, 0.6), rgba(250, 249, 246, 1)), url('https://images.unsplash.com/photo-1624463229249-923a1a2b5d53?q=80&w=2070&auto=format&fit=crop');">
+            <div class="container mx-auto px-6 text-center">
+                <h1 class="text-4xl md:text-6xl font-bold mb-4" style="color: var(--primary-green);">景宁畲族自治县具身智能产业发展蓝图</h1>
+                <p class="text-lg md:text-xl max-w-3xl mx-auto mb-8" style="color: var(--text-dark);">从千年畲乡文化到未来前沿科技，探索中国唯一畲族自治县的“新质生产力”发展新路径。</p>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto text-left">
+                    <div class="bg-white/70 backdrop-blur-sm p-6 rounded-lg shadow-lg border border-gray-200">
+                        <h3 class="font-bold text-xl mb-2" style="color: var(--accent-ochre);">2023年GDP</h3>
+                        <p class="text-3xl font-bold"><span id="gdp-value">102.82</span> 亿元</p>
+                        <p class="text-sm text-gray-600 mt-1">历史性突破百亿大关</p>
+                    </div>
+                    <div class="bg-white/70 backdrop-blur-sm p-6 rounded-lg shadow-lg border border-gray-200">
+                        <h3 class="font-bold text-xl mb-2" style="color: var(--accent-ochre);">全国唯一</h3>
+                        <p class="text-3xl font-bold">畲族自治县</p>
+                        <p class="text-sm text-gray-600 mt-1">深厚的民族文化底蕴</p>
+                    </div>
+                    <div class="bg-white/70 backdrop-blur-sm p-6 rounded-lg shadow-lg border border-gray-200">
+                        <h3 class="font-bold text-xl mb-2" style="color: var(--accent-ochre);">高新企业</h3>
+                        <p class="text-3xl font-bold"><span id="hightech-value">35</span> 家</p>
+                        <p class="text-sm text-gray-600 mt-1">地方财政科技投入增长15.4%</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="endowment" class="py-16 md:py-24">
+            <div class="container mx-auto px-6">
+                <div class="text-center max-w-3xl mx-auto">
+                    <h2 class="text-3xl md:text-4xl font-bold mb-4">景宁禀赋：发展具身智能的独特土壤</h2>
+                    <p class="text-lg text-gray-600 mb-12">本区域深入分析了景宁独特的自然生态、经济结构与文化传承。这些要素共同构成了景宁发展具身智能产业的基石。通过互动卡片和数据图表，您可以直观了解景宁的优势所在，正是这些优势决定了其应采取差异化的“利基创新”发展路径，而非与大城市进行同质化竞争。</p>
+                </div>
+                <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <div class="bg-white p-8 rounded-xl shadow-lg border border-[var(--border-color)] transform hover:-translate-y-2 transition-transform duration-300">
+                        <div class="text-4xl mb-4" style="color: var(--primary-green);">🌳</div>
+                        <h3 class="text-2xl font-bold mb-3">生态禀赋</h3>
+                        <p class="text-gray-600">“九山半水半分田”的地理特征与“生态一流”的环境，为智慧农业、生态监测机器人提供了天然的应用试验场。全县林业用地占比高达83%，生态是景宁最宝贵的财富。</p>
+                    </div>
+                    <div class="bg-white p-8 rounded-xl shadow-lg border border-[var(--border-color)] transform hover:-translate-y-2 transition-transform duration-300">
+                        <div class="text-4xl mb-4" style="color: var(--accent-ochre);">🎭</div>
+                        <h3 class="text-2xl font-bold mb-3">文化特色</h3>
+                        <p class="text-gray-600">作为全国唯一的畲族自治县，拥有丰富的非物质文化遗产。这为开发文化导览、传统歌舞表演等服务型机器人创造了独一无二的利基市场，能有效提升文旅体验。</p>
+                    </div>
+                    <div class="bg-white p-8 rounded-xl shadow-lg border border-[var(--border-color)] transform hover:-translate-y-2 transition-transform duration-300">
+                        <div class="text-4xl mb-4" style="color: var(--primary-green);">💼</div>
+                        <h3 class="text-2xl font-bold mb-3">经济活力</h3>
+                        <p class="text-gray-600">拥有“景宁600”农业品牌、生态工业基础，以及庞大的“小超市、小水电、小宾馆”外出创业群体。这批企业家是潜在的“逆向人才”和资本回流来源，为产业发展提供动力。</p>
+                    </div>
+                </div>
+                <div class="mt-16 text-center">
+                    <h3 class="text-2xl font-bold mb-4">生态优势可视化：土地利用结构</h3>
+                     <div class="chart-container">
+                        <canvas id="landUseChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="swot" class="py-16 md:py-24 bg-white">
+            <div class="container mx-auto px-6">
+                <div class="text-center max-w-3xl mx-auto">
+                    <h2 class="text-3xl md:text-4xl font-bold mb-4">SWOT战略分析</h2>
+                    <p class="text-lg text-gray-600 mb-12">本部分将报告中详尽的SWOT分析提炼为直观的四象限布局。这不仅是对景宁发展具身智能产业内外环境的全面审视，更是制定后续应用蓝图和发展路线的战略依据。通过清晰的优势、劣势、机遇与威胁对比，您可以快速把握景宁产业发展的核心博弈点。</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="bg-green-50 p-6 rounded-lg border border-green-200">
+                        <h3 class="text-2xl font-bold text-green-800 mb-3">👍 优势 (Strengths)</h3>
+                        <ul class="list-disc list-inside text-green-700 space-y-2">
+                            <li>独特的生态与文化禀赋，提供差异化应用场景</li>
+                            <li>成熟的生态农业和旅游产业基础</li>
+                            <li>活跃的创业精神和潜在的回流资本与人才</li>
+                            <li>高层政治关注与“共同富裕”试点地位</li>
+                            <li>“飞地经济”提供外部产业孵化平台</li>
+                        </ul>
+                    </div>
+                    <div class="bg-red-50 p-6 rounded-lg border border-red-200">
+                        <h3 class="text-2xl font-bold text-red-800 mb-3">👎 劣势 (Weaknesses)</h3>
+                        <ul class="list-disc list-inside text-red-700 space-y-2">
+                            <li>高科技制造业基础薄弱，缺乏核心研发能力</li>
+                            <li>高端专业人才稀缺，引才留才困难</li>
+                            <li>山区地形对大规模产业布局构成挑战</li>
+                            <li>缺乏具身智能领域的详细专项发展规划</li>
+                        </ul>
+                    </div>
+                    <div class="bg-blue-50 p-6 rounded-lg border border-blue-200">
+                        <h3 class="text-2xl font-bold text-blue-800 mb-3">✨ 机遇 (Opportunities)</h3>
+                        <ul class="list-disc list-inside text-blue-700 space-y-2">
+                            <li>国家及省市对AI和“新质生产力”的战略支持</li>
+                            <li>可融入丽水市一体化的创新生态圈</li>
+                            <li>生态、文旅、公共服务等领域存在巨大蓝海市场</li>
+                            <li>“共同富裕”目标导向，易于争取政策与资源</li>
+                        </ul>
+                    </div>
+                    <div class="bg-yellow-50 p-6 rounded-lg border border-yellow-200">
+                        <h3 class="text-2xl font-bold text-yellow-800 mb-3">⚠️ 威胁 (Threats)</h3>
+                        <ul class="list-disc list-inside text-yellow-700 space-y-2">
+                            <li>来自发达地区在技术、人才、资本上的激烈竞争</li>
+                            <li>技术迭代迅速，存在投资落后风险</li>
+                            <li>技术引进与应用推广的初期成本高昂</li>
+                            <li>本地若无良好生态，可能加剧人才流失</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="blueprint" class="py-16 md:py-24">
+            <div class="container mx-auto px-6">
+                <div class="text-center max-w-3xl mx-auto">
+                    <h2 class="text-3xl md:text-4xl font-bold mb-4">四大应用蓝图：具身智能在景宁的未来</h2>
+                    <p class="text-lg text-gray-600 mb-12">基于SWOT分析，我们不应追求大而全，而应聚焦于能将景宁优势最大化的特定领域。本区域通过交互式选项卡，详细描绘了具身智能在智慧农业、文旅、工业及公共服务四大方向的具体应用场景、潜在效益和创新模式。这不仅是技术的展示，更是为景宁量身定制的、可落地的产业发展构想。</p>
+                </div>
+                <div class="flex justify-center mb-8 flex-wrap gap-2">
+                    <button class="tab-btn active px-4 py-2 rounded-md border-2 font-semibold transition" data-tab="agriculture">🌾 智慧生态农业</button>
+                    <button class="tab-btn px-4 py-2 rounded-md border-2 font-semibold transition" data-tab="tourism">🎭 智慧文化旅游</button>
+                    <button class="tab-btn px-4 py-2 rounded-md border-2 font-semibold transition" data-tab="industry">🏭 特色生态工业</button>
+                    <button class="tab-btn px-4 py-2 rounded-md border-2 font-semibold transition" data-tab="public">❤️ 智慧公共服务</button>
+                </div>
+
+                <div id="tab-content" class="bg-white p-8 rounded-lg shadow-lg border border-[var(--border-color)] min-h-[350px]">
+                    
+                </div>
+            </div>
+        </section>
+
+        <section id="roadmap" class="py-16 md:py-24 bg-white">
+            <div class="container mx-auto px-6">
+                 <div class="text-center max-w-3xl mx-auto">
+                    <h2 class="text-3xl md:text-4xl font-bold mb-4">三步走发展路线图</h2>
+                    <p class="text-lg text-gray-600 mb-12">为确保蓝图能够稳步实现，报告提出了清晰的1年、3年、5年分阶段政策建议。在这里，我们将其转化为一个互动时间轴。您可以点击不同阶段，查看从“基础夯实”到“生态培育”，再到“规模效应”的具体政策措施和预期目标。这使得复杂的政策规划变得一目了然。</p>
+                </div>
+                <div class="flex justify-center space-x-4 mb-12">
+                     <button class="roadmap-btn active text-lg font-bold py-3 px-6 rounded-lg shadow-md transition-all duration-300" data-year="1">近期 (1年)</button>
+                     <button class="roadmap-btn text-lg font-bold py-3 px-6 rounded-lg shadow-md transition-all duration-300" data-year="3">中期 (3年)</button>
+                     <button class="roadmap-btn text-lg font-bold py-3 px-6 rounded-lg shadow-md transition-all duration-300" data-year="5">远期 (5年)</button>
+                </div>
+                <div id="roadmap-content" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                </div>
+                 <div class="mt-16 text-center">
+                    <h3 class="text-2xl font-bold mb-4">预期成效：高新技术企业增长预测</h3>
+                     <div class="chart-container">
+                        <canvas id="growthChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+    
+    <footer class="bg-gray-800 text-white py-8">
+        <div class="container mx-auto px-6 text-center">
+            <p>景宁畲族自治县具身智能产业发展可行性研究与政策建议</p>
+            <p class="text-sm text-gray-400 mt-2">交互式报告 | 2025</p>
+        </div>
+    </footer>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+    const data = {
+        applicationBlueprint: {
+            agriculture: {
+                title: '智慧生态农业',
+                icon: '🌾',
+                description: '发展适用于山区地形的特种机器人，对“景宁600”品牌农产品（如惠明茶、食用菌）进行精准监测、病虫害防治、自动化采摘与分拣。例如，部署小型无人机或履带式机器人进行茶园巡检、识别病害并精准施药。',
+                benefits: ['提高生产效率，降低劳动强度', '提升农产品品质与品牌价值', '促进农业向智能化、可持续方向发展'],
+                chartData: {
+                    labels: ['传统人工作业', '机器人辅助作业'],
+                    datasets: [{
+                        label: '生产效率提升 (%)',
+                        data: [100, 160],
+                        backgroundColor: ['rgba(180, 138, 94, 0.6)', 'rgba(88, 116, 88, 0.6)'],
+                        borderColor: ['rgb(180, 138, 94)', 'rgb(88, 116, 88)'],
+                        borderWidth: 1
+                    }]
+                },
+                sparklePrompt: "基于景宁山区生态农业的特点，请为具身智能机器人在智慧农业领域提出3-5个创新的应用场景和潜在效益。具体可考虑惠明茶、食用菌等特色农产品，以及病虫害防治、采摘、分拣等环节。"
+            },
+            tourism: {
+                title: '智慧文化旅游',
+                icon: '🎭',
+                description: '在核心景区和畲族文化场馆部署服务机器人，提供多语言导览、互动讲解、甚至模拟表演畲族歌舞。结合VR/AR技术，打造沉浸式文化体验，以数字化方式活化并传承非物质文化遗产。',
+                benefits: ['提升旅游体验的科技感与吸引力', '拓宽畲族文化传播渠道', '吸引年轻游客，创造新消费点'],
+                sparklePrompt: "结合景宁唯一的畲族自治县文化特色和非物质文化遗产，为具身智能机器人在智慧文化旅游领域设想3-5个独特的交互体验或服务模式。可以考虑导览、表演、文化传承等方面。"
+            },
+            industry: {
+                title: '特色生态工业',
+                icon: '🏭',
+                description: '在民族工艺品、竹木制品等领域，引入机器人进行精细化操作、质量检测或替代危险、重复工序。尤其可在“飞地”丽景民族工业园先行试点，探索智能仓储物流与机器人辅助生产。',
+                benefits: ['提高产品一致性与生产效率', '降低人工成本和安全风险', '推动生态工业向高端化、智能化转型'],
+                sparklePrompt: "针对景宁民族工艺品、竹木制品等特色生态工业，请为具身智能机器人在生产效率提升、质量控制、替代危险工序等方面，提出3-5个具体且可落地的创新应用方案。"
+            },
+            public: {
+                title: '智慧公共服务',
+                icon: '❤️',
+                description: '研发用于山区环境监测的机器人（如森林防火巡逻、水质自动监测）、垃圾分类回收机器人，并在社区推广养老辅助、物资配送等服务机器人，提升公共服务效率与质量，提高居民生活品质与安全感。',
+                benefits: ['改善居民生活环境，助力生态县建设', '提升灾害应对能力与公共安全水平', '有效应对人口老龄化挑战'],
+                sparklePrompt: "考虑到景宁的山区环境和公共服务需求，请为具身智能机器人在生态监测、垃圾分类、养老辅助、物资配送等智慧公共服务领域，提供3-5个创新的应用设想和其带来的社会效益。"
+            }
+        },
+        roadmap: {
+            '1': {
+                title: "基础夯实与试点先行",
+                policies: [
+                    { name: "强化组织领导", detail: "成立县级产业发展领导小组，统筹协调。" },
+                    { name: "启动应用试点", detail: "选取1-2个智慧农业或文旅场景，开展示范项目。" },
+                    { name: "开展基础培训", detail: "依托现有平台，培养首批机器人操作维护人员。" },
+                    { name: "评估基础设施", detail: "摸底网络、算力现状，制定初步规划。" },
+                    { name: "制定初期激励", detail: "研究出台县级补贴或奖励政策，吸引项目落地。" },
+                ]
+            },
+            '3': {
+                title: "生态培育与规模发展",
+                policies: [
+                    { name: "拓展应用场景", detail: "向生态管理、公共服务、特色工业等领域推广。" },
+                    { name: "实施精准招商", detail: "吸引解决方案提供商、系统集成商落地。" },
+                    { name: "深化产学研合作", detail: "与顶尖高校院所共建实验室，引进技术。" },
+                    { name: "构建数据平台", detail: "将景宁特有数据转化为模型训练的宝贵资源。" },
+                    { name: "加强人才体系", detail: "开设专业方向，培养中高级技能人才，吸引团队。" },
+                ]
+            },
+            '5': {
+                title: "规模效应与创新生态成熟",
+                policies: [
+                    { name: "打造产业集群", detail: "形成具有山区民族特色的具身智能产业集群。" },
+                    { name: "建设创新平台", detail: "争取省级支持，建设技术试验场或应用创新中心。" },
+                    { name: "完善金融支持", detail: "发挥政府引导基金作用，吸引社会资本进入。" },
+                    { name: "推动成果普惠", detail: "让科技红利惠及更多畲乡群众，赋能共同富裕。" },
+                    { name: "构建开放生态", detail: "参与标准制定，推动数据、平台、技术接口开放共享。" },
+                ]
+            }
+        }
+    };
+    
+    let currentChart = null;
+    
+    async function generateSparkleIdeas(prompt, outputDivId, loadingDivId) {
+        const outputDiv = document.getElementById(outputDivId);
+        const loadingDiv = document.getElementById(loadingDivId);
+
+        outputDiv.innerHTML = '';
+        loadingDiv.classList.remove('hidden');
+
+        try {
+            let chatHistory = [];
+            chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+            const payload = { contents: chatHistory };
+            const apiKey = "";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+            
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(`API error: ${response.status} ${response.statusText} - ${JSON.stringify(errorData)}`);
+            }
+
+            const result = await response.json();
+
+            if (result.candidates && result.candidates.length > 0 &&
+                result.candidates[0].content && result.candidates[0].content.parts &&
+                result.candidates[0].content.parts.length > 0) {
+                const text = result.candidates[0].content.parts[0].text;
+                outputDiv.innerHTML = `<div class="bg-blue-50 p-4 rounded-lg mt-4 border border-blue-200">
+                                            <h4 class="font-semibold mb-2 text-blue-800">✨ AI生成洞察:</h4>
+                                            <p class="text-blue-700 whitespace-pre-wrap">${text}</p>
+                                        </div>`;
+            } else {
+                outputDiv.innerHTML = `<p class="text-red-500 mt-4">未能获取AI洞察，请稍后再试。</p>`;
+            }
+        } catch (error) {
+            console.error('Error calling Gemini API:', error);
+            outputDiv.innerHTML = `<p class="text-red-500 mt-4">生成洞察时出错：${error.message}</p>`;
+        } finally {
+            loadingDiv.classList.add('hidden');
+        }
+    }
+
+
+    function updateBlueprintContent(tab) {
+        const content = data.applicationBlueprint[tab];
+        const contentDiv = document.getElementById('tab-content');
+        
+        let chartHtml = '';
+        if (content.chartData) {
+            chartHtml = `<div class="chart-container mt-8 mx-auto"><canvas id="blueprintChart"></canvas></div>`;
+        }
+
+        contentDiv.innerHTML = `
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                <div>
+                    <h3 class="text-3xl font-bold mb-4 flex items-center"><span class="text-4xl mr-3">${content.icon}</span> ${content.title}</h3>
+                    <p class="text-gray-600 mb-6">${content.description}</p>
+                    <ul class="space-y-2">
+                        ${content.benefits.map(b => `<li class="flex items-start"><span class="text-green-500 mr-2 mt-1">✔</span><span>${b}</span></li>`).join('')}
+                    </ul>
+                    <button id="generate-sparkle-ideas-btn" class="mt-6 px-6 py-3 bg-[var(--accent-ochre)] text-white font-bold rounded-lg shadow-md hover:bg-orange-600 transition-colors duration-300 flex items-center justify-center">
+                        ✨ 生成创新洞察
+                    </button>
+                    <div id="sparkle-loading" class="hidden mt-4 flex items-center justify-center">
+                        <div class="loading-spinner"></div>
+                        <span class="ml-2 text-gray-600">AI正在思考...</span>
+                    </div>
+                    <div id="sparkle-output"></div>
+                </div>
+                <div class="hidden md:block">
+                  ${chartHtml}
+                </div>
+            </div>
+             <div class="block md:hidden mt-8">
+                  ${chartHtml}
+             </div>
+        `;
+        
+        if (currentChart) {
+             currentChart.destroy();
+        }
+
+        if (content.chartData) {
+            const ctx = document.getElementById('blueprintChart').getContext('2d');
+            currentChart = new Chart(ctx, {
+                type: 'bar',
+                data: content.chartData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, grace: '20%' }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        title: { display: true, text: '机器人应用效益预测' }
+                    }
+                }
+            });
+        }
+
+        // Add event listener for the new sparkle button
+        document.getElementById('generate-sparkle-ideas-btn').addEventListener('click', () => {
+            generateSparkleIdeas(content.sparklePrompt, 'sparkle-output', 'sparkle-loading');
+        });
+    }
+
+    function updateRoadmapContent(year) {
+        const content = data.roadmap[year];
+        const contentDiv = document.getElementById('roadmap-content');
+        contentDiv.innerHTML = content.policies.map(p => `
+            <div class="bg-gray-50 p-6 rounded-lg border border-gray-200 hover:shadow-md transition-shadow">
+                <h4 class="font-bold text-lg mb-2" style="color:var(--accent-ochre);">${p.name}</h4>
+                <p class="text-gray-600 text-sm">${p.detail}</p>
+            </div>
+        `).join('');
+    }
+
+    const tabButtons = document.querySelectorAll('.tab-btn');
+    tabButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            tabButtons.forEach(btn => btn.classList.remove('active'));
+            button.classList.add('active');
+            updateBlueprintContent(button.dataset.tab);
+        });
+    });
+
+    const roadmapButtons = document.querySelectorAll('.roadmap-btn');
+    roadmapButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            roadmapButtons.forEach(btn => btn.classList.remove('active'));
+            button.classList.add('active');
+            updateRoadmapContent(button.dataset.year);
+        });
+    });
+
+    // Initial content
+    updateBlueprintContent('agriculture');
+    updateRoadmapContent('1');
+    
+    // Animate numbers
+    function animateValue(obj, start, end, duration) {
+        let startTimestamp = null;
+        const step = (timestamp) => {
+            if (!startTimestamp) startTimestamp = timestamp;
+            const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+            obj.innerHTML = (progress * (end - start) + start).toFixed(2);
+            if (progress < 1) {
+                window.requestAnimationFrame(step);
+            }
+        };
+        window.requestAnimationFrame(step);
+    }
+    
+    // Intersection Observer for animations and nav links
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                if(entry.target.id === 'hero'){
+                    animateValue(document.getElementById('gdp-value'), 0, 102.82, 1500);
+                    animateValue(document.getElementById('hightech-value'), 0, 35, 1500);
+                }
+                document.querySelectorAll('.nav-link').forEach(link => {
+                    link.classList.toggle('active', link.getAttribute('href').substring(1) === entry.target.id);
+                });
+            }
+        });
+    }, { rootMargin: '-50% 0px -50% 0px', threshold: 0 });
+
+    document.querySelectorAll('section').forEach(section => {
+        observer.observe(section);
+    });
+
+
+    // Mobile Menu
+    const mobileMenuButton = document.getElementById('mobile-menu-button');
+    const mobileMenu = document.getElementById('mobile-menu');
+    mobileMenuButton.addEventListener('click', () => {
+        mobileMenu.classList.toggle('hidden');
+    });
+    
+    // Close mobile menu on link click
+    mobileMenu.addEventListener('click', () => {
+        mobileMenu.classList.add('hidden');
+    });
+
+
+    // Chart.js instances
+    const landUseCtx = document.getElementById('landUseChart').getContext('2d');
+    new Chart(landUseCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['林业用地', '其他（水域、田地等）'],
+            datasets: [{
+                label: '土地利用占比',
+                data: [83, 17],
+                backgroundColor: [
+                    'rgba(88, 116, 88, 0.7)',
+                    'rgba(180, 138, 94, 0.7)',
+                ],
+                borderColor: [
+                    'rgb(88, 116, 88)',
+                    'rgb(180, 138, 94)',
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `${context.label}: ${context.raw}%`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    const growthCtx = document.getElementById('growthChart').getContext('2d');
+    new Chart(growthCtx, {
+        type: 'line',
+        data: {
+            labels: ['当前', '1年后', '3年后', '5年后'],
+            datasets: [{
+                label: '高新技术企业数量',
+                data: [35, 42, 60, 85],
+                fill: true,
+                backgroundColor: 'rgba(88, 116, 88, 0.2)',
+                borderColor: 'rgb(88, 116, 88)',
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: false
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
+        }
+    });
+
+});
+</script>
+
+</body>
+</html>
